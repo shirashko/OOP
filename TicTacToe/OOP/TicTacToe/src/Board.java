@@ -12,25 +12,18 @@ enum GameStatus { DRAW, X_WIN, O_WIN, IN_PROGRESS }
  * Represents the game board for a Tic-Tac-Toe-like game.
  */
 public class Board {
-    public static final int SIZE = 3; // The board size (length and width)
+    public static final int SIZE = 5; // The board size
     public static final int WIN_STREAK = 3; // The length of a winning sequence. Always smaller than SIZE
+
+    private int LEFT = -1;
+    private int RIGHT = 1;
+    private int UP = 1;
+    private int DOWN = -1;
+    private int STAY_IN_PLACE = 0;
+
     private Mark[][] board;
     private GameStatus gameStatus;
     private int numberOfPlayedCells; // to keep track if a tie has been reached (when the board is full)
-    private static final         // Define directions for checking
-    int[][] directions = {
-            {0, 1},   // Right
-            {0, -1},  // Left
-            {1, 0},   // Down
-            {-1, 0},  // Up
-            {1, 1},   // Down-Right
-            {-1, -1}, // Up-Left
-            {1, -1},  // Down-Left
-            {-1, 1}   // Up-Right
-    };
-    private static final int ROW_IDX = 0;
-    private static final int COL_IDX = 1;
-
 
     /**
      * Initializes the game board with all cells marked as BLANK.
@@ -90,7 +83,7 @@ public class Board {
 
     private int countMarkInDirection(int row, int col, int rowDelta, int colDelta, Mark mark) {
         int count = 0;
-        while(isValidBoardCell(row, col) && board[row][col] == mark) {
+        while(row < SIZE && row >= 0 && col < SIZE && col >= 0 && board[row][col] == mark) {
             count++;
             row += rowDelta;
             col += colDelta;
@@ -98,23 +91,44 @@ public class Board {
         return count;
     }
 
-    private void updateGameStatus(int row, int col) {
-        Mark markToUpdate = board[row][col];
+    private void updateGameStatus(int row, int col){
+        // Check if last change in the board brought to a horizontal, diagonal or vertical WIN_STREAK
+        // sequence of Mark.X or Mark.O mark and update the game status accordingly
 
-        // Check each direction
-        for (int[] dir : directions) {
-            int countForward = countMarkInDirection(row, col, dir[ROW_IDX], dir[COL_IDX], markToUpdate);
-            int countBackward = countMarkInDirection(row, col, -dir[ROW_IDX], -dir[COL_IDX  ], markToUpdate);
+        Mark lastMark = board[row][col];
 
-            if (thereIsWinningStreak(markToUpdate, countForward, countBackward)) {
-                return;
-            }
+        // Horizontally : left and right directions
+        int countLeft = countMarkInDirection(row, col, STAY_IN_PLACE, LEFT, lastMark);
+        int countRight = countMarkInDirection(row, col, STAY_IN_PLACE, RIGHT, lastMark);
+        if (thereIsWinningStreak(lastMark, countLeft, countRight)){
+            return;
+        }
+
+        // Vertically - up and down
+        int countDown = countMarkInDirection(row, col, DOWN, STAY_IN_PLACE, lastMark);
+        int countUp = countMarkInDirection(row, col, UP, STAY_IN_PLACE, lastMark);
+        if (thereIsWinningStreak(lastMark, countDown, countUp)){
+            return;
+        }
+
+        // Diagonally
+        int countUpRight = countMarkInDirection(row, col, UP, RIGHT, lastMark);
+        int countDownLeft = countMarkInDirection(row, col, DOWN, LEFT, lastMark);
+        if (thereIsWinningStreak(lastMark, countUpRight, countDownLeft)){
+            return;
+        }
+
+        int countUpLeft = countMarkInDirection(row, col, UP, LEFT, lastMark);
+        int countDownRight = countMarkInDirection(row, col, DOWN, RIGHT, lastMark);
+        if (thereIsWinningStreak(lastMark, countUpLeft, countDownRight)){
+            return;
         }
 
         // Check the case where all board cells were played without any winning streak
-        if (numberOfPlayedCells == SIZE * SIZE) {
+        if (numberOfPlayedCells == SIZE*SIZE){
             gameStatus = GameStatus.DRAW;
         }
+
     }
 
     private boolean thereIsWinningStreak(Mark mark, int countLeft, int countRight) {
@@ -131,8 +145,9 @@ public class Board {
     }
 
     private boolean isValidBoardCell(int row, int col) {
-        return 0 <= row && 0 <= col && row < SIZE && col < SIZE;
+        return 0 <= row && 0 <= col && row < board.length && col < board[row].length;
     }
+
 
     // assumes validity of the cell
     private boolean isEmptyCell(int row, int col){

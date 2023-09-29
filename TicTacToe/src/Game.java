@@ -30,6 +30,7 @@ public class Game {
         Board board = new Board();
         renderer.renderBoard(board);
 
+        // define lists of players and marks to enable easy way to manipulate the game flow
         Player[] players = {playerX, playerO};
         Mark[] marks = {Mark.X, Mark.O};
         int counter = 0;
@@ -37,36 +38,12 @@ public class Game {
 
         while (board.getGameStatus() == GameStatus.IN_PROGRESS) {
             renderer.renderBoard(board);
-            idx = counter % 2;
+            idx = counter % 2; // todo: counts as magic number?
             players[idx].playTurn(marks[idx], board);
             counter++;
         }
 
         renderer.renderBoard(board);
         return board.getGameStatus();
-    }
-
-    /**
-     * The main method that initializes players, renderer, and the game, and then runs the game.
-     *
-     * @param args The command-line arguments (not used in this implementation).
-     */
-    public static void main(String[] args) {
-        Player playerX = new Player();
-        Player playerO = new Player();
-        Renderer renderer = new Renderer();
-
-        Game game = new Game(playerX, playerO, renderer);
-        GameStatus winner = game.run();
-
-        if (winner == GameStatus.DRAW){
-            System.out.println("The game ended with a tie");
-        }
-        else if (winner == GameStatus.X_WIN) {
-            System.out.println("The winner is X");
-        }
-        else{
-            System.out.println("The winner is O");
-        }
     }
 }
