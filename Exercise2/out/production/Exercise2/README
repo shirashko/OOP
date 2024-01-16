@@ -1,0 +1,11 @@
+shirashko
+209144013
+
+1. The strategy for each one of the automated players:
+- Clever player go over the board line by line from left to right and from top to bottom and choose the first empty
+cell.
+- Genius player go over the board column by column, starting from the second column, from top to bottom and choose the
+first empty cell.
+
+2. The advantage of the program pattern design by which all the players implement a common interface is that ...
+- Program to interface and not to implementation
