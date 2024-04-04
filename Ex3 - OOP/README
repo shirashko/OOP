@@ -1,6 +1,3 @@
-shirashko,yoavance
-209144013,209409911
-
 1. According to the uml provided, the role of each class in the project & the connection between them:
 ascii_art package:
 - Shell: Serves as the main driver class for the application. It reads user input, executes commands based
