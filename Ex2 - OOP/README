@@ -1,6 +1,3 @@
-shirashko,yoavance
-209144013,209409911
-
 1. In our design, we chose to delegate the responsibility of removing bricks from the game to the
 BrickerGameManager, by composition of the BrickerGameManager in the BasicCollisionStrategy which handles the
 bricks collisions. This approach adheres to the principle of information hiding, as bricks are abstracted 
