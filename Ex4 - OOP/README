@@ -1,0 +1,83 @@
+shirashko,yoavance
+209144013,209409911
+
+Explain the way you chose to implement the trees package, refer to the following points:
+- Describe the different classes you created in the package.
+Flora: This class is the one interacts with the PepseGameManager, tasked with the procedural generation of
+trees across the game terrain. It uses a probability-based approach to randomly place trees within a
+specified horizontal range. The class creates the trees in the game, encapsulating the logic for determining
+where a tree should be created and placed based on the terrain's height, utilizing a Function<Float, Float>
+callback given in its constructor. This callback empowers the manager to dynamically specify tree height
+within the game world, ensuring that tree generation is both responsive and adaptive to the terrain's
+characteristics.
+
+Tree: Represents an individual tree within the game world. A Tree object coordinates the assembly of its
+components, positioning them correctly to form a cohesive tree structure (such as the leaves appear above the
+trunk). This class encapsulates the logic for the physical appearance and behavior of the tree, including the
+randomization of attributes like leaf and fruit density.
+
+The following classes  represent the physical components of a tree. They extend GameObject, utilizing it's
+provided functionality such as rendering manipulation and collision handling:
+
+Trunk - serves as the structural base of the tree, with variable height and color (across some baseline
+color), and the capability to change color by calling the changeColor method. This method is utilized for the
+desired response requested in the exercise, when the avatar jumps.
+
+Leaf - leaves exhibit dynamic behavior, such as swaying and resizing to simulate the effect of wind, and can
+rotate to demonstrate interaction within the game world. Each leaf is initialized with a delay to start
+swaying, creating a more realistic effect. The class also provides a method to rotate the leaf in 90 degrees,
+utilized for the desired response requested in the exercise, when the avatar jumps.
+
+Fruit - this class add an interactive element to the game, disappearing (simulating being eaten) upon
+collision with the avatar and triggering a callback function that can, for instance, increase the avatar's
+energy. The fruit reappears after a day cycle from the disappearance is completed. For getting such behavior,
+the class has a setter method for the onFruitEaten functionality, enabling the manager to set a function that
+will be called when the fruit is collided, specifically enable for specific behavior such as when the fruit
+is colliding with the avatar (identified by the avatar's tag) to simulate eating the fruit. The class also
+provides a method to change it's color to an alternative one, utilized for the desired response requested in
+the exercise, when the avatar jumps.
+
+- Explain the connections between the classes.
+The Flora class encapsulating the creation of Tree instances, effectively linking the game's terrain with the
+flora. Each Tree aggregates Trunk, Leaf, and Fruit objects, managing their spatial and logical relationship
+to each other to represent a single tree entity within the game world.
+The Trunk, Leaf, and Fruit classes are directly related to their respective visual and interactive aspects of
+a tree, each responsible for rendering and behavior specific to their function within the tree structure. In
+addition, each tree component is incharge of adding himself to be updated when the avatar jumps to be
+notified to preform its related action.
+
+- Design Patterns Used:
+Observer Pattern
+An Observer-like mechanism is implemented for managing interactions between the avatar and tree components,
+facilitating the dynamic response of tree components (leaves, fruits, trunk), to avatar jump events. In this
+design, the avatar serves as the subject, notifying jump events to registered observers, in this game, the
+tree components to react accordingly. This design enables a clear separation between the avatar's actions and
+the tree components' responses, enhancing modularity and supporting the Open/Closed Principle (OCP) by
+enabling easy addition or removal of listeners. To simplify the implementation, the design leverages the
+Runnable interface for event notifications, making the necessity for a custom AvatarJumpListener interface
+redundant. The Tree components register their interest in jump events through callback functions, which are
+encapsulated as Runnable objects and maintained by the avatar in a collection (a list). Upon executing a
+jump, the avatar iterates over this collection, invoking each callback and thereby triggering the
+predetermined responses in the tree components. This approach not only adheres to the principles of the
+Observer pattern by decoupling the subject (avatar) from its observers (tree components), but also leverages
+the flexibility and simplicity of using lambda expressions and method references for defining and managing
+callbacks.
+Similarly, the energy manager also manage a list of energy listeners, which are called when the avatar energy
+changes, but in this case, there is only one listener, the energy display, which in the current
+implementation is the only component that needs to be notified each time the avatar energy changes.
+
+Strategy Pattern
+Recalling on the Bricker game from Exercise 2, which utilized the Strategy pattern to differentiate collision
+responses between bricks and the ball, a similar approach is adopted in this game for managing interactions
+between the avatar and fruits. While not adhering strictly to the classic Strategy pattern—where a concrete
+strategy implements an interface for handling collisions—the mechanism for fruit consumption in this game
+aligns with the pattern's foundational principle. Fruits invoke a specific callback function upon colliding
+with the avatar, dynamically determining the behavior (e.g., the effects of fruit consumption) at runtime
+through the `onFruitCollision` function composed within the `Fruit` class. This implementation streamlines
+the Strategy pattern by leveraging Java's `BiConsumer` functional interface 
+(`BiConsumer<GameObject, Collision>`), allowing the `onFruitCollision` function to be set directly. This
+approach eliminates the need for a dedicated Strategy interface and its various implementations, simplifying
+the design by using lambda expressions and method references to define behavior. By employing functional
+interfaces, this strategy ensures flexibility and simplicity, promoting an efficient and direct method for
+implementing behavior changes driven by strategy. Similarly, other callback functions are used in the game.
+They can also be considered as a Strategy pattern, making the game more flexible and easy to maintain.

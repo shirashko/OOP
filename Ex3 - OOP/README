@@ -1,0 +1,213 @@
+shirashko,yoavance
+209144013,209409911
+
+1. According to the uml provided, the role of each class in the project & the connection between them:
+ascii_art package:
+- Shell: Serves as the main driver class for the application. It reads user input, executes commands based
+on the input, and manages the high-level flow of the program. It interacts with AsciiArtImageManager,
+AsciiCharacterSetManager, and AsciiArtOutputManager to handle specific tasks related to image processing,
+character set management, and ascii art output, respectively. All command related handling goes hand by
+hand with the command enums class.
+- AsciiArtImageManager: Manages image loading, resolution adjustments, and subdividing images into smaller
+sections for ASCII art conversion. It works closely with the Image and ImageProcessor classes to perform 
+these tasks.
+- AsciiCharacterSetManager: Manages the set of characters used for creating ASCII art. It allows for adding 
+or removing characters and interacts with SubImgCharMatcher to match image brightness levels to characters.
+- AsciiArtOutputManager: Handles the output of the generated ASCII art, supporting different formats such as
+console output or HTML. It uses the AsciiOutput interface and its implementations (ConsoleAsciiOutput,
+HtmlAsciiOutput) to abstract the details of the output method.
+- AsciiArtAlgorithm: Contains the algorithm for converting images to ASCII art. It gets the brightness matrix
+representing the output and matches a char for each brightness using SubImgCharMatcher's function.
+- KeyboardInput: singleton class that handles the user input from the keyboard, and is used by the Shell
+class (was supplied).
+
+In this package we created an inner package called exceptions which contains all the custom exceptions that
+we implemented in the project, which is only used in this package, at this high level of the program, and 
+not by the low level components. It includes - EmptyCharacterSetException, ImageLoadingException,
+InvalidCommandException, ResolutionOutOfBoundsException, ShellException (more details in the exceptions 
+section).
+
+image_char_matching package:
+- SubImgCharMatcher: Maps characters to brightness levels for ASCII art generation. It uses a data structure
+(TreeMap<Double, TreeSet<Character>>) to organize characters by their normalized brightness levels. It uses a
+data structure (HashMap<Character, Double) to access characters' brightness by the character.
+- CharConverter: Converts a brightness level to a character using SubImgCharMatcher (was supplied).
+
+
+image package:
+- Image: Represents an image loaded from a file or defined by a pixel matrix.
+- ImageProcessor: This class is a library that provides functionalities like padding images, splitting images
+into a matrix of sub-images and calculating normalized brightness.
+
+
+2. The data structure used in the project, where used, and why it is the one chosen, and the time and memory 
+complexity of the data structure:
+subImgCharMatcher:
+- TreeMap<Double, TreeSet<Character>> in SubImgCharMatcher: This data structure maps normalized brightness 
+levels (double) to sets of characters (TreeSet<Character>). It is chosen for its ability to keep keys sorted
+and for efficient retrieval of characters based on brightness levels and ascii code order.
+The time complexity for basic operations like addChar, removeChar, and remove is O(log n). But, when changing
+the minimum or the maximum in insertion or removal, each of the mentioned actions will take O(nlog(n)), 
+because we will have to rebuild the tree to match the new normalized brightnesses. It is likely that most of
+the time each of the actions will be O(log(n)) because changing the minimum or the maximum is not very 
+likely, making it efficient for lookup and updates. It's worth mentioning that the maximum amount of chars in
+the tree is ~90 making (number of ascii codes) the nlog(n) running time relatively small. The memory 
+complexity depends on the number of entries and the size of TreeSets but is generally efficient due to the 
+tree-based structure.
+Memory efficiency: O(n) where n is the number of characters in the set, since the different trees sets were 
+holding the different relevant characters for each brightness level, and the tree map was holding the 
+different brightness levels and the relevant tree sets.
+- HashMap<Character, Double> in SubImgCharMatcher: This data structure maps characters to their unnormalized
+brightness levels. It is used as foundation to check for containing chars for avoiding unnecessary removal or
+addition (in case the char is already not in/ in the set) and to rebuild the TreeMap in case of new min or 
+max and a need to re-normalize, allowing average O(1) runtime to reach every character's unnormalized 
+brightness if exist or indicative null if not.
+Memory complexity: O(n) where n is the number of characters in the map.
+
+We want to explain the choice to hold in the tree the normalized brightness instead of holding the original
+ones and by that saving rebuilding the tree from the start each time the minimum or maximum value is changed.
+When working with big matrices, or specifically with images, which typically are a big heavy structure, we
+get very long runtime even if for each sub-Image the runtime is relatively small. For example, adding a 
+constant run time of three operations for each sub-Image to un-normalize the brightness for trying to find
+it's closest character un-normalized brightness in such tree, if we have 1024 resolution, assuming the image
+is squared, we will have 1024*1024 sub-Images, we will have 3*1024*1024 more operations to do, which is a 
+lot. This is compared to recalculate the normalized tree in case of a new minimum or new maximum by 
+O(n*log(n)), but for n<=~ 90. This is why we chose to hold the normalized brightness in the tree, and
+not the original ones.
+
+AsciiCharacterSetManager:
+- TreeSet<Character> in AsciiCharacterSetManager: This data structure is used to print the existing chars by
+the order of their ascii value. It is also useful to check if a char is already in the set, and to add or 
+remove chars from the set accordingly when user commands are given. We will mention that we considered 
+putting this data structure in the subImgCharMatcher class and to add a method to the subImgCharMatcher class
+that will return the ordered characters, but we decided to put it in the AsciiCharacterSetManager class, 
+since it is more relevant to the character set management. If in the future we would like to add more
+management functionality, we don't want every time to change the subImgCharMatcher class, and we want to keep
+the classes as independent as possible. This choice did introduce a need to keep the the subImgCharMatcher 
+and this ordered set synchronized, but we found it to be a good trade-off.
+Time complexity: where n is the number of characters in the set, for looping and printing the characters in 
+the set is O(n) set. For lookup, add and remove operations, the time complexity is O(log n). It also worth
+mention we did implement inside the SubImgCharMatcher in the removal and addition it's own check for the
+character existence for safety, and for future other classes to use the subImgCharMatcher, and to avoid
+unnecessary removal or addition.
+Memory complexity: O(n) where n is the number of characters in the set.
+
+- Image[][] in ImageProcessor and AsciiArtImageManager: It is used to temporarily store the sub-images of the
+image, which is essentials for the next stage of converting them to the characters with the closest
+brightness level.
+Time complexity: The division into sub images is done in O(n*m) where n is the number of sub-images in each
+row, and m is the number of columns in each sub-image, decided by the resolution. This two dimension array
+was chosen as the data structure to store the sub-images, since it is the most natural way to store a matrix
+of sub-images, and it is the most efficient way to access the sub-images, since we can access the sub-images
+by their row and column indexes in O(1) time complexity.
+Memory complexity: O(n*m) where n is the number of sub-images in each row, and m is the number of columns in
+each sub-image.
+
+- double[][] in AsciiArtImageManager: This data structure is used as Image[][] as a intermediate stage during
+the algorithm of converting the image into characters with the matching brightness level. This data structure
+is used to store the sub-images normalized brightness of the padded image to be used in the algorithm of
+converting the sub-image into characters art with the closest brightness level. This the double matrix was
+chosen as the data structure from similar considerations as the Image[][] data structure.
+Time complexity: We make a constant number of actions fo each sub-image making the runtime O(m*n) where n is
+the number of sub-images in each row, and m is the number of columns in each sub-image.
+Memory complexity: O(n*m) where n is the number of sub-images in each row, and m is the number of columns in
+each sub-image.
+
+- Map<String, AsciiOutput> in the AsciiArtOutputManager: This data structure is used to store the different
+output methods that the program supports, and to allow the user to choose the output method by its name. It
+is used to abstract the details of the output method, and to allow for adding new output methods in the
+future. We chose to use a map to store the output methods, since it allows for efficient retrieval of the
+output method by its name, and it allows for easy addition of new output methods in the future. The time
+complexity for basic operations like adding, removing, and retrieving the output methods is O(1), and the
+memory complexity is O(n) where n is the number of output methods in the map.
+
+
+We want to also mention how we make our code more efficient using these data structures:
+- As regarding to try and save in the brightness calculation of each sub image, we made the double[][]
+subImagesNormalizedBrightnesses data structure and a flag indicative of image or resolution change as fields
+of the AsciiArtImageManager class. By that, we only recalculated the sub images brightnesses when the image
+or the resolution changed, and not in every command. This is a trade-off decision we made between memory and
+time complexities, since the brightness calculation is a relatively heavy operation. In the AsciiArt
+algorithm side, it only asks from the image manager the sub images normalized brightnesses, by that
+encapsulate the calculation of the brightnesses logic, but get that if the image and resolution were not
+changed between runs (for example when the user only adjusting the character sets or the output method), the
+brightnesses will not be recalculated. Also, we could have saved the last resolution which was used to run
+the algorithm (indicative by the last resolution when calling getSubImagesNormalizedBrightness, but we find
+it unlikely that a user will extensively make the resolution bigger and then return it back to the same one
+without running the asciiAlgorithm in between (or the opposite direction), so we have decided to keep the
+code simple for this unlikely case. We want to note that we thought about keeping the sub image brightness
+for each resolution asked if the user will want to return to an old resolution, but the time-memory trade-off
+choice that we have made was in benefit of memory.
+- As regarding the saving of the ascii code brightness chosen for the character set before normalization,
+which might not be changes between runs, for example when only the output method is changed, we made the
+SubImgCharMatcher class to hold the ascii code brightnesses chosen for the character set before normalization
+as a field, and to recalculate them only when the character set was changed, and not in every command. This
+is a trade-off decision we made between memory and time complexities, since the brightness calculation is at
+least as much as holding the ascii code brightnesses (need to calculate each character brightness by looping
+on 16*16 pixels).
+- As regarding to saving the normalized brightness if characters didn't change between runs, we saved the
+treeMap of the SubImgCharMatcher class as a field, and only changed it when the character set was changed,
+and recalculate it when the minimum or maximum was changed, and not in every command. Above we mention a
+detailed explanation why we chose to hold the normalized brightness in the tree, and to rebuild the tree when
+the minimum or maximum have changed.
+
+3. The way we used the exception mechanism in the project in order to handle user input errors and printing
+error messages:
+Checked exceptions are thrown in our program when predictable yet exceptional conditions occur, which change
+the normal flow of the program, which demand the program to be interrupted and be special handled, possibly
+from a higher level of the program. Handling the exceptions in the code is done in the Shell class in our
+program, the highest level of the program, which catches exceptions thrown by other components and prints
+user-friendly error messages in order to inform the user and allows for corrective actions. Such a high and
+centralized error handling approach simplifies error management and ensures a consistent user experience.
+
+The errors which leads to exceptions in the code are:
+- Invalid commands (include the command itself and its arguments).
+- Image loading errors.
+- Unsupported resolution adjustments.
+- attempts to generate asciiArt with an empty character set.
+
+The exceptions thrown in the code are:
+- ResolutionOutOfBoundsException.
+- InvalidCommandException.
+- InvalidPathException.
+- EmptyCharacterSetException.
+- ImageLoadingException.
+
+Which all inherit from the abstract ShellException class, which is a custom exception class we created, since
+all of the exceptions in the program are handled in the same way, so this allows for readable and
+maintainable code to handle the expected exceptions in the program at once in the Shell class, and are caught
+and handled uniformly by printing user-friendly error messages. For example, if we would like to add a new
+exception in the future, we can simply create a new class that extends ShellException, and it will be handled
+in the same way as the other exceptions.
+
+The reason for creating custom exceptions, is that for some of the exceptions, we didn't find an appropriate
+checked exception in the Java API, and we wanted to create a custom exception that is more specific to the
+error condition that caused it. Moreover, we wanted to enable a more specific error handling, for more
+maintainable code. For example, if we would use IOException instead of the ImageLoadingException, we could
+have caught the exception in the Shell class, without noticing if it is the exception we expected, and we
+would have to print a general error message no matter what the error was. This keep us safe from catching
+exceptions we didn't expect and handle them in the same way as the exceptions we did expect.
+
+The program handled was designed to pass the exceptions from the lower level of the program to the higher
+level, passing through the managers, which in their turn might have caught the exceptions and thrown a new
+exception, which is more specific to the error condition that caused it. For example, the
+AsciiArtImageManager might have caught an IOException and thrown an ImageLoadingException. We assume the
+manager is familiar with the error condition that caused the exception, and can throw a more specific
+exception, which is more informative to the Shell.
+
+When throwing an exception in the managers, it's constructor is called with an informative message that
+describes the error condition that caused the exception, following the exercises provided error messages.
+For example, when throwing an InvalidCommandException, we once call it when the command is not recognized,
+with the suitable message, and other time when the command is recognized, but the arguments are invalid,
+with the suitable message. Both options are type of invalid command, but the message is different, and it is
+informative to the user. We could have made a more specific exception for each of the error conditions, but
+we didn't find it necessary, since the program only print error messages when handling exceptions, and we
+didn't want to make the program more complex than it needs to be. Note that it is a easy to do this
+separation if needed in the future, by creating two different type of errors which will inherit from 
+InvalidCommandException, and could handled in different ways in the Shell class.
+
+4. Changes made to API (if any) of SubImgCharMatcher class and the reason for the changes:
+No changes have been made to the API of the SubImgCharMatcher class.
+
+5. Changes made to the supplied code (ascii_code excluded) and the reason for the changes:
+No changes have been made to the supplied code.

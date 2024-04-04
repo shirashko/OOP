@@ -1,0 +1,181 @@
+shirashko,yoavance
+209144013,209409911
+
+1. In our design, we chose to delegate the responsibility of removing bricks from the game to the
+BrickerGameManager, by composition of the BrickerGameManager in the BasicCollisionStrategy which handles the
+bricks collisions. This approach adheres to the principle of information hiding, as bricks are abstracted 
+from the details of their own removal, thus not requiring knowledge of the game manager's internal 
+mechanisms, such as the management of game objects within a collection. This design choice ensures that 
+modifications to how the game manager operates do not necessitate changes to brick implementations, enhancing
+maintainability. Additionally, it prevents direct manipulation of the game's object collection by other 
+classes, reducing the risk of unintended alterations to the game objects. Moreover, if needing more 
+information from the manager, that is not problematic to expose, like the window size, we can easily add a 
+method to the manager and use it in the bricks. However, this design introduces a more complex interaction 
+between the game manager and bricks, necessitating a public method for brick removal, which could potentially
+expose the game to manipulations by any class with access to the game manager. It risk by introduce cycles 
+dependencies which demand a delicate care. Also, whenever we want object to remove itself from the game, we
+need to pass the whole game manager reference to it, which is not ideal, since the manager is a big object
+that holds many other objects. Moreover, the ability to restart the game through a public initialization 
+function remains a vulnerability, allowing any holder of the game manager reference to reset the game state.
+This demand to be careful with the game manager reference, and to make sure that it is not exposed to any
+class that should not have access to it. In summary, while our approach streamlines game object management
+and reinforces encapsulation, it also complicates the game manager's role and increases the surface area for
+potential game state manipulation.
+
+2. Life Management Classes:
+In our Bricker game design, we manage the player's lives through a combination of three specialized classes:
+LifeManager, GraphicLifeManager, and NumericLifeCounter, each designed to handle distinct aspects of life
+representation and management.
+
+LifeManager: Serves as the central coordinator for life management, integrating both graphical and numerical
+life counters. It oversees life count increments and decrements, ensuring synchronization between graphical
+and numerical displays. The changes in the life count of the lifeManager is done by the update function of
+BrickerGameManager (called in every frame), which track the game progress. This class also manages 
+FallingLife objects for potential life gains (one of brick possible strategy uses this).
+
+GraphicLifeManager: Manages the graphical display of lives as array of heart icons, which are game objects
+with predefined position on the game window, dimensions and life renderable image, which enable the addition
+and removal of these icons during the games as the player gains or loses lives. This is done by composition
+of the BrickerGameManager, which is responsible for adding and removing game objects from the game window.
+This class dynamically adjusts the number of visible hearts based on the current life count, providing a
+visual representation of the player's remaining lives. The update of the live counter (decrement, increment)
+is called by the LifeManager to reflect changes in the life count. Since we do not see the GraphicLifeManager
+as a game object itself, we chose to work closely with the LifeManager to ensure that the graphical display
+is in sync with the actual life count.
+
+NumericLifeCounter: Provides a numeric display of the player's remaining lives, complementing the graphical
+representation by GraphicLifeManager. This class is a game object, which updates a text element on the screen
+to reflect the current life count, changing color based on the number of lives remaining to indicate the
+player's status (safe, warning, or danger).
+
+This design adheres to key OOP principles such as encapsulation, by keeping life management logic within
+dedicated classes, and loose Coupling, by minimizing dependencies between the life management system and
+other game components. One significant advantage of this approach is its flexibility, allowing for easy
+adjustments to the life display system and facilitating the addition of new features, such as different types
+of life bonuses. Moreover, by abstracting life management from the main game manager, we enhanced
+maintainability and scalability. However, this design also introduces complexity by distributing life-related
+functionality across multiple classes, which could potentially increase the effort required for understanding
+and managing these interactions.
+
+3. Implementation Overview and Class Roles added to support the special strategies:
+
+- CollisionStrategyDecorator: Abstract class with a wrapped CollisionStrategy instance, implement the
+collisionStrategy interface, demonstrating the decorator design pattern. Serves as the base class for all
+decorators, encapsulating a CollisionStrategy. This use of the decorator pattern allows for dynamic addition
+of behaviors to collisions without altering existing strategies, embodying the Open/Closed Principle. For the
+implementation of the single special strategies, we made all the strategies inherit from this class, receive
+a basic collision for the wrapped strategy, and override the collide method to add the special behavior.
+
+- BricksManager:  This class is responsible for creating and managing the bricks in the game. It is
+responsible for creating the bricks, setting their positions, and adding them to the game window. It also
+keeps track of the number of bricks in the game, and when the number of bricks reaches zero, it calls the
+BrickerGameManager to restart the game. it holds a reference to the CollisionStrategyFactory, and when a
+brick is created, it calls the factory to get the collision strategy for this brick. This class demonstrates
+the Single Responsibility Principle by centralizing the creation and management of bricks, and the
+application of collision strategies, within a dedicated entity.
+
+- CollisionStrategyFactory: This class is responsible for creating the special strategies, according to the
+one responsibility principle. It has private methods for creating each strategy, with providing polymorphic
+wrapped strategies. It has a method for creating a random strategy for a brick, encapsulating the actual
+strategy creation by private methods.
+
+
+- PaddleManager and BallManager: These manager classes centralize the creation and management of paddle and
+ball objects, respectively. PaddleManager handles both the main paddle and special VanishPaddle, ensuring
+their correct positioning and initialization. BallManager oversees the main ball and additional PuckBalls,
+setting their initial velocities and managing their behavior. These classes demonstrate the Single
+Responsibility Principle by dividing the management responsibilities among specialized entities.
+
+FallingLife: is a game object that represents a life bonus dropping from a given position downward, and can
+collide only with a game object with specified tag (for our use we sent main paddle tag) implemented using
+the tag and a override of the shouldCollideWith method. This collision grant extra lives, reflected by
+updating a lifeManager reference composed in this class. When out of the game window (the bottom), it removes
+itself from the game.
+
+PuckBall: This class inherits from the Ball class, as it "is a" ball. This ball benefits from the same
+behavior (such as hit collision sound) as the main ball, by receiving the onCollisionEnter method from the
+Ball class, and adds its own behavior to the game, by overriding the update function to check if it is inside
+the window bounds, and removing itself from the game if not.
+
+VanishPaddle: This class inherits from the Paddle class, as it "is a" paddle. Similar to the PuckBall, it
+benefits from the same behavior such as the main paddle, and adds its own behavior to the game, by overriding
+the update function to track the number of hits from other game objects, and removing itself from the game if
+reached the predefined number of hits (and for that, it is a vanish paddle).
+
+BallFocusCameraChanger: This class is responsible for changing the camera focus to the main ball and
+adjusting the camera zoom based to the main ball. It uses an invisible game object to change the camera's
+focus. Although it is not conceptually a game object itself, we wanted to implement this behavior as a game
+object, so we can use the BrickerGameManager to add and remove it from the game window, without changing the
+implementation of the BrickerGameManager and making it more complex. This class track the ball collision
+numbers from the moment it is added to the game by keeping the main ball reference, and when it reaches a
+predefined number of hits, it undo the ball focus change and removes itself from the game.
+
+Special Behavior Implementations:
+AddBallsStrategyDecorator: Introduces additional PuckBalls into the game, utilizing BallManager for their
+creation and management. Using array of pucks for possible extensions for using more than 2 puck balls, and
+when brick collision occurs we loop on this array and add this pucks to the game.
+
+AddVanishPaddleStrategyDecorator: Adds a VanishPaddle to the game, if a counter of extra game paddles is set
+to zero. By using a shared Counter for all the bricks, created by the paddle manager, we can make sure that
+only one vanish paddle is added to the game. After creating this paddle, the counter is set to 1, and when
+the paddle is removed from the game, the counter is set to zero again, enabling the addition of another
+vanish paddle to the game if needed.
+
+CameraStrategyDecorator: Focuses the camera on the main ball, adjusting zoom. If the main ball collided with
+the brick (check is done by using the main ball tag. This is the way we differentiate the handling of puck
+balls and the main ball), it checks if the camera is already focused on the main ball (assuming the camera is
+set to null otherwise), and if not, it adds a BallFocusCameraChanger to the game.
+
+GainExtraLifeStrategyDecorator: Generates a FallingLife object, managed by LifeManager, that grants extra
+lives upon collection.
+
+OOP Principles Insight:
+Encapsulation: By hiding the complexity of special behavior implementations within dedicated classes and
+using managers for game object handling, we encapsulate behavior logic, making the system more maintainable
+and extensible.
+Inheritance: The PuckBall class, inheriting from Ball, and the use of decorators, illustrate inheritance and
+polymorphism, allowing for flexible behavior extensions and variations.
+Loose Coupling: The design minimizes dependencies between game objects and their behaviors, with
+CollisionStrategyFactory facilitating loose coupling by dynamically assigning behaviors without tight
+integration.
+
+4. Double Behavior Strategy Implementation: We implemented the double behavior strategy in the
+CollisionStrategyFactory because this strategy involves making two or more strategies wrap themselves one
+over another. We consider encapsulate the logic of the double behavior strategy in a seperate class, but
+since there is not really a decoration of the wrapped strategies, and if creating such class we need to only
+corporate with the factory to achieve this wrapped strategies, we decided to implement it in the factory
+itself, centerlizing the randomization and strategies creation in one place.
+In the CollisionStrategyFactory class, We first choose the number of single special strategies we will use.
+A function randomizes a number between 0 and 4. If the result is not 4 (⅕ chance), we randomize again. If
+after the 2 randomizations we got 4, we randomize three strategies from the other special strategies;
+otherwise, we randomize only two. As mention, we used the decorator pattern to wrap the special single
+strategies so when a brick has more two or more special strategies, we wrap the strategies one over the
+other, either way first by the basic collision (not count as part of the special strategies), and then the
+special strategies. We used a recursive call to the collide method of the wrapped strategy, so when a brick
+pops, the strategies call one another until the basic strategy is called.
+
+5. Paddle and BrickerGameManager Enhancements:
+
+- We added an argument to set the main paddle tag in the Paddle class. This change allows us to send the tag
+to the falling heart class so that the falling heart only collides with the main paddle as required.
+
+- In BrickerGameManager, we have two constructors: one that takes no arguments and another that takes two
+arguments to set the number of rows and the number of bricks in a row.
+- getGameWindowDimension is used by many classes, such as LifeCountManager, to place the graphic and numeric
+life counts.
+
+- isInsideWindowBounds is used to check if game objects are outside the window, and if so, they delete
+themselves.
+
+- removeGameObject is used by game objects to remove themselves from the game when needed.
+
+- addGameObject is used by managers to add game objects to the game.
+
+- UserInputListener is used by the paddles to move them appropriately.
+
+- We have also added a Constants file with package private constants, unified in enums, for resource paths,
+game layers by game objects, and game object tags. This file is used for the managers can uniformly use the
+same constants, avoiding confusions and errors, and for easily and in organized way change the game objects
+tags, layers and resources paths, in a way that will be easy to maintain and understand. The managers in
+their turn will decide which information to expose to the game objects using them (such as the tags and 
+layers).
