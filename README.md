@@ -1,6 +1,9 @@
 # Object Oriented Programming
 Repository for the Object Oriented Programming (OOP) course. This repository includes various projects and exercises that illustrate the fundamental concepts of OOP, such as encapsulation, inheritance, polymorphism, and abstraction.
 
+<img src="https://miro.medium.com/v2/resize:fit:1400/0*GQCVlaNMkJQXWF8C.png" height="300" />
+
+
 ## Course Overview
 This course provides a comprehensive look into object-oriented design and the construction of complex applications using the principles of OOP. It aims to instill best practices for writing clean, maintainable, and reusable code in an object-oriented language.
 
